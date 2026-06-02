@@ -1,99 +1,201 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User, signInAnonymously } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer, collection, getDocs } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-export const auth = getAuth(app);
-
-const provider = new GoogleAuthProvider();
-
-export const signIn = async () => {
-  try {
-    const result = await signInWithPopup(auth, provider);
-    return result.user;
-  } catch (error) {
-    console.error("Error signing in", error);
-    throw error;
-  }
-};
-
-export const subscribeToAuth = (callback: (user: User | null) => void) => {
-  return onAuthStateChanged(auth, async (u) => {
-    if (!u) {
-      try {
-        const res = await signInAnonymously(auth);
-        callback(res.user);
-      } catch (e) {
-        console.warn("Failed anonymous auth:", e);
-        callback(null);
-      }
-    } else {
-      callback(u);
-    }
-  });
-};
-
-export enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
+export enum GameState {
+  MENU = 'MENU',
+  COLLECTION = 'COLLECTION',
+  BATTLE = 'BATTLE',
+  UPGRADE = 'UPGRADE',
+  TUTORIAL = 'TUTORIAL',
+  SHOP = 'SHOP',
+  DETAILS = 'DETAILS',
+  TROPHY_ROAD = 'TROPHY_ROAD',
+  BATTLE_PASS = 'BATTLE_PASS',
 }
 
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  }
+export enum GameMode {
+  SOLO_SHOWDOWN = 'SOLO_SHOWDOWN',
+  COIN_RUSH = 'COIN_RUSH',
+  BOUNTY = 'BOUNTY',
+  BOSS_FIGHT = 'BOSS_FIGHT',
+  DUO_SHOWDOWN = 'DUO_SHOWDOWN',
+  BREAKTHROUGH = 'BREAKTHROUGH',
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData?.map(provider => ({
-        providerId: provider.providerId,
-        email: provider.email,
-      })) || []
-    },
-    operationType,
-    path
-  }
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+export type HeroId = 'goose-einstein' | 'chicken' | 'sigeon' | 'svinobomba' | 'alcatrasnic' | 'bimbolit' | 'oreshki' | 'svin' | 'seliuk' | 'aura-tom' | 'smurfik' | 'capybara' | 'pes-patron' | 'aura-scrooge';
+
+export interface HeroStats {
+  health: number;
+  maxHealth: number;
+  damage: number;
+  speed: number;
+  range: number;
+  fireDelay: number; // ms between individual shots
+  reloadTime: number; // ms to refill one ammo slot
+  ammoCapacity: number;
+  ultimateChargeRate: number; // percentage per hit
 }
 
-export async function testConnection() {
-  const path = 'system/connection_test';
-  try {
-    // Attempt to read a non-existent doc to trigger a server roundtrip
-    await getDocFromServer(doc(db, 'system', 'connection_test'));
-    console.log("Firebase: Connection verified");
-  } catch (error) {
-    if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('Missing or insufficient permissions'))) {
-      // This is actually a success for connection, just not authed
-      console.log("Firebase: Connection verified (not authed)");
-    } else {
-      handleFirestoreError(error, OperationType.GET, path);
-    }
-  }
+export interface HeroAbility {
+  name: string;
+  description: string;
+  cooldown: number; // ms
+}
+
+export interface Skin {
+  id: string;
+  name: string;
+  image: string;
+  cost: number;
+}
+
+export interface Hero {
+  id: HeroId;
+  name: string;
+  title: string;
+  level: number;
+  coinsToUpgrade: number;
+  coinsToUnlock: number;
+  stats: HeroStats;
+  ability: HeroAbility;
+  ultimate: HeroAbility;
+  passive: string;
+  color: string;
+  image?: string;
+  unlocked: boolean;
+}
+
+export interface Projectile {
+  id: string;
+  ownerId: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  damage: number;
+  radius: number;
+  color: string;
+  life: number; // time remaining
+  isWindSlash?: boolean;
+  isMangoFlame?: boolean;
+  isPiercingUlt?: boolean;
+  hitEntityIds?: string[];
+}
+
+export interface Entity {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  rotation: number;
+  health: number;
+  maxHealth: number;
+  speed: number;
+  isBot: boolean;
+  heroId: HeroId;
+  ammo: number;
+  maxAmmo: number;
+  lastReloadProgress: number; // ms since last ammo refill started
+  ultimateCharge: number; // 0 to 100
+  lastShotTime: number;
+  stunnedUntil: number; // timestamp
+  abilityCooldown: number;
+  lastDamageTime: number;
+  isHidden: boolean;
+  team: 'blue' | 'red' | 'green' | 'yellow';
+  coins: number;
+}
+
+export interface Bush {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface Destructible {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  health: number;
+  maxHealth: number;
+  type: 'crate' | 'ruins';
+}
+
+export interface GameCoin {
+  id: string;
+  x: number;
+  y: number;
+}
+
+export interface GameWorld {
+  width: number;
+  height: number;
+  player: Entity;
+  bots: Entity[];
+  remotePlayers: Entity[];
+  projectiles: Projectile[];
+  bushes: Bush[];
+  destructibles?: Destructible[];
+  coins: GameCoin[];
+  camera: { x: number; y: number };
+  mode: GameMode;
+  timeLeft?: number;
+  scores?: { blue: number; red: number };
+  roomId?: string;
+  isHost?: boolean;
+  wave?: number;
+  waveState?: string;
+  waveTimer?: number;
+  mangoPoints?: number;
+  bargeOpen?: boolean;
+}
+
+export interface UserData {
+  coins: number;
+  unlockedHeroIds: HeroId[];
+  heroLevels: Record<HeroId, number>;
+  heroSkins: Record<HeroId, string>; // color hex
+  ownedSkinIds: Record<HeroId, string[]>;
+  selectedSkinId: Record<HeroId, string | null>;
+  selectedHeroId: HeroId;
+  hasSeenTutorial: boolean;
+  trophies: number;
+  claimedTrophyMilestones: number[];
+  svinemarks?: number;
+  claimedBattlepassLevels?: number[];
+  mangoPoints?: number;
+  claimedBattlepassSeason2Levels?: number[];
+  auraCrates?: number;
+  tomPearlCrates?: number;
+  mangoCrates?: number;
+  potuzhnoCrates?: number;
+  prestigeTokens?: number;
+  capybaraPrestigeTokens?: number;
+  heroPrestige?: Partial<Record<HeroId, number>>;
+  dailyQuests?: DailyQuest[];
+  lastQuestsRefresh?: string;
+  adminCoinMultiplier?: number;
+  adminCoinExpr?: number;
+  adminLuckMultiplier?: number;
+  adminLuckExpr?: number;
+}
+
+export interface DailyQuest {
+  id: string;
+  description: string;
+  type: 'wins' | 'kills';
+  target: number;
+  progress: number;
+  claimed: boolean;
+  reward: {
+    type: 'coins' | 'trophies' | 'svinemarks' | 'crate_aura' | 'crate_pearl' | 'crate_mango' | 'crate_potuzhno';
+    amount: number;
+  };
+  isHardcore: boolean;
 }
