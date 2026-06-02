@@ -1,0 +1,129 @@
+import { HeroId } from '../types';
+
+export interface BattlepassLevelInfo {
+  level: number;
+  svinemarksRequired: number;
+  rewardType: 'coins' | 'crate' | 'hero' | 'crate_pearl' | 'skin' | 'crate_pearl_item' | 'crate_mango_item' | 'capybara_prestige';
+  rewardValue: number | HeroId | string;
+  label: string;
+  sublabel: string;
+}
+
+export const BATTLEPASS_LEVELS: BattlepassLevelInfo[] = [
+  { level: 1, svinemarksRequired: 100, rewardType: 'coins', rewardValue: 150, label: 'Starter Cache', sublabel: '150 Gold Coins' },
+  { level: 2, svinemarksRequired: 250, rewardType: 'crate', rewardValue: 1, label: 'Meme Crate', sublabel: 'Random Hero or Skin roll' },
+  { level: 3, svinemarksRequired: 470, rewardType: 'coins', rewardValue: 300, label: 'Svin Gold Sack', sublabel: '300 Gold Coins' },
+  { level: 4, svinemarksRequired: 770, rewardType: 'crate', rewardValue: 1, label: 'Sausage Pack Box', sublabel: 'Rare Crate Roll' },
+  { level: 5, svinemarksRequired: 1170, rewardType: 'coins', rewardValue: 500, label: 'Capy Treasure', sublabel: '500 Gold Coins' },
+  { level: 6, svinemarksRequired: 1690, rewardType: 'crate', rewardValue: 2, label: 'Mega Svin Mark Box', sublabel: 'Epic Roll (x2)' },
+  { level: 7, svinemarksRequired: 2340, rewardType: 'coins', rewardValue: 800, label: 'Royal Treasury', sublabel: '800 Gold Coins' },
+  { level: 8, svinemarksRequired: 3140, rewardType: 'crate', rewardValue: 3, label: 'Omega Capy Crate', sublabel: 'Legendary Mystic Roll (x3)' },
+  { level: 9, svinemarksRequired: 4140, rewardType: 'coins', rewardValue: 1200, label: 'Grand Svin Fortune', sublabel: '1200 Gold Coins' },
+  { level: 10, svinemarksRequired: 5390, rewardType: 'hero', rewardValue: 'capybara', label: 'Mark Capybara', sublabel: 'Exclusive Hero Unlock!' },
+  { level: 11, svinemarksRequired: 6800, rewardType: 'coins', rewardValue: 1500, label: 'Royal Coin Chest', sublabel: '1500 Gold Coins' },
+  { level: 12, svinemarksRequired: 8500, rewardType: 'crate', rewardValue: 1, label: 'Prestige Aura Crate', sublabel: 'Aura Crate Reward' },
+  { level: 13, svinemarksRequired: 10500, rewardType: 'coins', rewardValue: 2500, label: 'Gemini Treasury', sublabel: '2500 Gold Coins' },
+  { level: 14, svinemarksRequired: 13000, rewardType: 'crate_pearl', rewardValue: 1, label: 'Tom Pearl Crate', sublabel: 'Legendary Tom Pearl Crate (Super high-tier rewards)' },
+  { level: 15, svinemarksRequired: 16000, rewardType: 'skin', rewardValue: 'royal-tom', label: 'Royal Tom Skin', sublabel: 'Exclusive Royal Skin for Aura Tom!' },
+  { level: 16, svinemarksRequired: 19500, rewardType: 'coins', rewardValue: 3000, label: 'Grand Svin Sack', sublabel: '3000 Gold Coins' },
+  { level: 17, svinemarksRequired: 23500, rewardType: 'crate_pearl_item', rewardValue: 1, label: 'Tom Pearl Crate', sublabel: '1 Pearl Crate added to inventory!' },
+  { level: 18, svinemarksRequired: 28000, rewardType: 'coins', rewardValue: 4000, label: 'Meme Coin Mountain', sublabel: '4000 Gold Coins' },
+  { level: 19, svinemarksRequired: 33000, rewardType: 'crate_mango_item', rewardValue: 1, label: 'Mango Crate', sublabel: '1 Mango Crate added to inventory!' },
+  { level: 20, svinemarksRequired: 38500, rewardType: 'coins', rewardValue: 5000, label: 'Svin Boss Cache', sublabel: '5000 Gold Coins' },
+  { level: 21, svinemarksRequired: 44500, rewardType: 'crate_pearl_item', rewardValue: 2, label: 'Double Pearl Box', sublabel: '2 Pearl Crates added to inventory!' },
+  { level: 22, svinemarksRequired: 51000, rewardType: 'coins', rewardValue: 6000, label: 'Mega Meme Vault', sublabel: '6000 Gold Coins' },
+  { level: 23, svinemarksRequired: 58000, rewardType: 'crate_mango_item', rewardValue: 2, label: 'Double Mango Pack', sublabel: '2 Mango Crates added to inventory!' },
+  { level: 24, svinemarksRequired: 66000, rewardType: 'coins', rewardValue: 8000, label: 'Giga Potuzhnik Treasury', sublabel: '8000 Gold Coins' },
+  { level: 25, svinemarksRequired: 75000, rewardType: 'crate_mango_item', rewardValue: 3, label: 'Mango Jackpot Roll', sublabel: '3 Free Mango Crates added to inventory!' },
+  { level: 26, svinemarksRequired: 85000, rewardType: 'capybara_prestige', rewardValue: 1, label: 'Mango Prestige Upgrade', sublabel: 'For Mark Capybara only! Level up star ranking.' },
+  { level: 27, svinemarksRequired: 96000, rewardType: 'coins', rewardValue: 9000, label: 'Mark Golden Treasury', sublabel: '9000 Gold Coins' },
+  { level: 28, svinemarksRequired: 108000, rewardType: 'capybara_prestige', rewardValue: 1, label: 'Mango Prestige Upgrade', sublabel: 'For Mark Capybara only! Level up star ranking.' },
+  { level: 29, svinemarksRequired: 121000, rewardType: 'coins', rewardValue: 10000, label: 'Pristine Orange Vault', sublabel: '10000 Gold Coins' },
+  { level: 30, svinemarksRequired: 135000, rewardType: 'capybara_prestige', rewardValue: 1, label: 'Mango Prestige Upgrade', sublabel: 'For Mark Capybara only! Max prestige power.' },
+];
+
+export const BATTLEPASS_S2_LEVELS: BattlepassLevelInfo[] = [
+  { level: 1, svinemarksRequired: 100, rewardType: 'coins', rewardValue: 200, label: 'Starter Mango Cache', sublabel: '200 Gold Coins' },
+  { level: 2, svinemarksRequired: 250, rewardType: 'crate', rewardValue: 1, label: 'Mango-Meme Crate', sublabel: 'Random Hero or Skin roll' },
+  { level: 3, svinemarksRequired: 450, rewardType: 'coins', rewardValue: 400, label: 'Golden Mango Sack', sublabel: '400 Gold Coins' },
+  { level: 4, svinemarksRequired: 700, rewardType: 'crate', rewardValue: 1, label: 'Sausage Mango Pack', sublabel: 'Rare Crate Roll' },
+  { level: 5, svinemarksRequired: 1000, rewardType: 'skin', rewardValue: 'dino-alcatrasnic', label: 'Dino alcatrasnic Skin', sublabel: 'Unlock the wild Dino alcatrasnic skin!' },
+  { level: 6, svinemarksRequired: 1400, rewardType: 'crate', rewardValue: 2, label: 'Mega Mango Mark Box', sublabel: 'Epic Roll (x2)' },
+  { level: 7, svinemarksRequired: 1900, rewardType: 'coins', rewardValue: 1000, label: 'Royal Mango Treasury', sublabel: '1000 Gold Coins' },
+  { level: 8, svinemarksRequired: 2500, rewardType: 'crate', rewardValue: 3, label: 'Omega Mango Crate', sublabel: 'Legendary Mystic Roll (x3)' },
+  { level: 9, svinemarksRequired: 3200, rewardType: 'crate_mango_item', rewardValue: 1, label: 'Free Mango Crate', sublabel: '1 Mango Crate added to inventory!' },
+  { level: 10, svinemarksRequired: 4000, rewardType: 'skin', rewardValue: 'hunter-tom', label: 'Hunter Tom Skin', sublabel: 'Unlock the elegant Hunter Tom skin (Aura Tom)!' },
+  { level: 11, svinemarksRequired: 4900, rewardType: 'coins', rewardValue: 1200, label: 'Tropical Coin Cache', sublabel: '1200 Gold Coins' },
+  { level: 12, svinemarksRequired: 5900, rewardType: 'crate', rewardValue: 1, label: 'Standard Aura Crate', sublabel: 'Aura Crate reward' },
+  { level: 13, svinemarksRequired: 7000, rewardType: 'coins', rewardValue: 1500, label: 'Summer Gold Pack', sublabel: '1500 Gold Coins' },
+  { level: 14, svinemarksRequired: 8200, rewardType: 'crate_pearl_item', rewardValue: 1, label: 'Single Tom Pearl Box', sublabel: '1 Pearl Crate added to inventory!' },
+  { level: 15, svinemarksRequired: 9500, rewardType: 'skin', rewardValue: 'explorer-patron', label: 'Explorer Patron Skin', sublabel: 'Unlock the courageous Explorer Patron skin!' },
+  { level: 16, svinemarksRequired: 11000, rewardType: 'crate_mango_item', rewardValue: 1, label: 'Fresh Mango Crate', sublabel: '1 Mango Crate added to inventory!' },
+  { level: 17, svinemarksRequired: 12700, rewardType: 'coins', rewardValue: 2500, label: 'Tropical Treasure', sublabel: '2500 Gold Coins' },
+  { level: 18, svinemarksRequired: 14500, rewardType: 'crate_pearl_item', rewardValue: 2, label: 'Double Tom Pearl Box', sublabel: '2 Pearl Crates added to inventory!' },
+  { level: 19, svinemarksRequired: 16500, rewardType: 'crate_mango_item', rewardValue: 2, label: 'Double Mango Crate Pack', sublabel: '2 Mango Crates added to inventory!' },
+  { level: 20, svinemarksRequired: 19000, rewardType: 'skin', rewardValue: 'tropical-tom', label: 'Tropical Tom Skin', sublabel: 'Unlock the amazing Tropical Tom skin (Aura Tom)!' },
+  { level: 21, svinemarksRequired: 21800, rewardType: 'coins', rewardValue: 3000, label: 'Grand Tropical Gold', sublabel: '3000 Gold Coins' },
+  { level: 22, svinemarksRequired: 25000, rewardType: 'crate_mango_item', rewardValue: 1, label: 'Island Choice Crate', sublabel: '1 Mango Crate added to inventory!' },
+  { level: 23, svinemarksRequired: 28600, rewardType: 'coins', rewardValue: 3500, label: 'Deep Sea Gold Cache', sublabel: '3500 Gold Coins' },
+  { level: 24, svinemarksRequired: 32700, rewardType: 'crate_pearl_item', rewardValue: 2, label: 'Double Coral Pearl Box', sublabel: '2 Pearl Crates added to inventory!' },
+  { level: 25, svinemarksRequired: 37400, rewardType: 'skin', rewardValue: 'divesuit-goose', label: 'Divesuit goose Skin', sublabel: 'Unlock the courageous Divesuit goose skin (Goose Einstein)!' },
+  { level: 26, svinemarksRequired: 42800, rewardType: 'coins', rewardValue: 4000, label: 'Exotic Island Fortune', sublabel: '4000 Gold Coins' },
+  { level: 27, svinemarksRequired: 49000, rewardType: 'crate_mango_item', rewardValue: 2, label: 'Double Island Oasis Crate', sublabel: '2 Mango Crates added to inventory!' },
+  { level: 28, svinemarksRequired: 56100, rewardType: 'coins', rewardValue: 5000, label: 'Abyssal Treasury Pack', sublabel: '5000 Gold Coins' },
+  { level: 29, svinemarksRequired: 64200, rewardType: 'crate_pearl_item', rewardValue: 3, label: 'Triple Abyssal Pearl Locker', sublabel: '3 Pearl Crates added to inventory!' },
+  { level: 30, svinemarksRequired: 73500, rewardType: 'skin', rewardValue: 'tropical-svin', label: 'Tropical svin Skin', sublabel: 'Unlock the amazing Tropical svin skin!' },
+  { level: 31, svinemarksRequired: 84000, rewardType: 'coins', rewardValue: 6000, label: 'Grand Tycoon Vault', sublabel: '6000 Gold Coins' },
+  { level: 32, svinemarksRequired: 95800, rewardType: 'crate_mango_item', rewardValue: 2, label: 'Golden Mango Vault', sublabel: '2 Mango Crates added to inventory!' },
+  { level: 33, svinemarksRequired: 109000, rewardType: 'coins', rewardValue: 7000, label: 'Sovereign Treasury Sacks', sublabel: '7000 Gold Coins' },
+  { level: 34, svinemarksRequired: 123800, rewardType: 'crate_pearl_item', rewardValue: 3, label: 'Scrooge Pearl Locker', sublabel: '3 Pearl Crates added to inventory!' },
+  { level: 35, svinemarksRequired: 140400, rewardType: 'coins', rewardValue: 8000, label: 'Emerald Oasis Loot', sublabel: '8000 Gold Coins' },
+  { level: 36, svinemarksRequired: 159000, rewardType: 'crate_mango_item', rewardValue: 3, label: 'Imperial Mango Shipment', sublabel: '3 Mango Crates added to inventory!' },
+  { level: 37, svinemarksRequired: 179800, rewardType: 'coins', rewardValue: 10000, label: 'Pharaoh Gold Chamber', sublabel: '10000 Gold Coins' },
+  { level: 38, svinemarksRequired: 203000, rewardType: 'crate_pearl_item', rewardValue: 4, label: 'Double Scrooge Pearl Vault', sublabel: '4 Pearl Crates added to inventory!' },
+  { level: 39, svinemarksRequired: 228800, rewardType: 'coins', rewardValue: 15000, label: 'Legendary Hoarder Cache', sublabel: '15000 Gold Coins' },
+  { level: 40, svinemarksRequired: 257400, rewardType: 'hero', rewardValue: 'aura-scrooge', label: 'Aura Scrooge', sublabel: 'Unlock the Golden Parrying Tycoon - Aura Scrooge!' },
+];
+
+/**
+ * Returns current level reached based on Svinemarks/Mango points.
+ */
+export function getBattlepassLevel(svinemarks: number, levels: BattlepassLevelInfo[] = BATTLEPASS_LEVELS): number {
+  let level = 0;
+  for (const lvl of levels) {
+    if (svinemarks >= lvl.svinemarksRequired) {
+      level = lvl.level;
+    } else {
+      break;
+    }
+  }
+  return level;
+}
+
+/**
+ * Returns Svinemarks/Mango points needed for next level.
+ */
+export function getMarksForNextLevel(svinemarks: number, levels: BattlepassLevelInfo[] = BATTLEPASS_LEVELS): { currentMarksInLevel: number, totalNeededForLevel: number, nextLevel: BattlepassLevelInfo | null } {
+  const currentLevelNum = getBattlepassLevel(svinemarks, levels);
+  const nextLvl = levels.find(l => l.level === currentLevelNum + 1);
+
+  if (!nextLvl) {
+    // Already max level
+    const prevLvlReq = levels[levels.length - 1].svinemarksRequired;
+    return {
+      currentMarksInLevel: svinemarks - prevLvlReq,
+      totalNeededForLevel: 0,
+      nextLevel: null,
+    };
+  }
+
+  const prevLvlReq = currentLevelNum === 0 ? 0 : levels[currentLevelNum - 1].svinemarksRequired;
+  const currentMarksInLevel = svinemarks - prevLvlReq;
+  const totalNeededForLevel = nextLvl.svinemarksRequired - prevLvlReq;
+
+  return {
+    currentMarksInLevel,
+    totalNeededForLevel,
+    nextLevel: nextLvl,
+  };
+}

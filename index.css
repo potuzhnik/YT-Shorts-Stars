@@ -1,0 +1,1222 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState } from 'react';
+
+import { GameState, UserData, GameMode, HeroId } from '../../types';
+import { HERO_VERSIONS, GAME_MODES, HERO_SKINS } from '../../constants';
+import { PartyData } from '../../services/partyService';
+import { Play, Shield, TrendingUp, ShoppingBag, User as UserIcon, Coins, ArrowLeft, ArrowRight, Key, X, CheckCircle2, ChevronDown, Globe, Cpu, Loader2, Copy, Check, AlertCircle, UserPlus, LogOut, Trophy, Sparkles, Zap, Newspaper } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { User } from 'firebase/auth';
+import { getRank } from '../../utils/ranks';
+import { getBattlepassLevel } from '../../utils/battlepass';
+
+interface MainMenuProps {
+  userData: UserData;
+  updateUserData: (data: Partial<UserData>) => void;
+  selectedMode: GameMode;
+  onSelectMode: (mode: GameMode) => void;
+  onPlaySolo: () => void;
+  onCreateCustomRoom: () => Promise<void>;
+  onJoinCustomRoom: (code: string) => Promise<void>;
+  onNavigate: (state: GameState) => void;
+  isOnline: boolean;
+  setIsOnline: (online: boolean) => void;
+  isSearching: boolean;
+  searchingData: {
+    roomId: string;
+    code: string;
+    playersCount: number;
+    isHost: boolean;
+    players: { name: string; heroId: string; userId: string }[];
+  } | null;
+  onCancelSearch: () => void;
+  onForceStart: () => void;
+  user: User | null;
+  onSignIn: () => Promise<User>;
+  onOpenDailyQuests: () => void;
+  onOpenAdminConsole: () => void;
+  partyData: PartyData | null;
+  onCreateParty: () => Promise<void>;
+  onJoinParty: (code: string) => Promise<boolean>;
+  onLeaveParty: () => Promise<void>;
+  onKickPartyMember: (userId: string) => Promise<void>;
+  onStartPartyMatch: () => Promise<void>;
+}
+
+export default function MainMenu({ 
+  userData, 
+  updateUserData, 
+  selectedMode, 
+  onSelectMode, 
+  onPlaySolo, 
+  onCreateCustomRoom,
+  onJoinCustomRoom,
+  onNavigate,
+  isOnline,
+  setIsOnline,
+  isSearching,
+  searchingData,
+  onCancelSearch,
+  onForceStart,
+  user,
+  onSignIn,
+  onOpenDailyQuests,
+  onOpenAdminConsole,
+  partyData,
+  onCreateParty,
+  onJoinParty,
+  onLeaveParty,
+  onKickPartyMember,
+  onStartPartyMatch,
+}: MainMenuProps) {
+  const [showCodes, setShowCodes] = useState(false);
+  const [showModes, setShowModes] = useState(false);
+  const [code, setCode] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
+
+  // Party states
+  const [showJoinPartyModal, setShowJoinPartyModal] = useState(false);
+  const [partyJoinCode, setPartyJoinCode] = useState('');
+  const [partyJoinError, setPartyJoinError] = useState('');
+  const [partyJoining, setPartyJoining] = useState(false);
+
+  // Custom private lobby state
+  const [showMultiplayerOptions, setShowMultiplayerOptions] = useState(false);
+  const [multiplayerOption, setMultiplayerOption] = useState<'selection' | 'join'>('selection');
+  const [joinCode, setJoinCode] = useState('');
+  const [joinError, setJoinError] = useState('');
+  const [joining, setJoining] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const selectedHero = HERO_VERSIONS[userData.selectedHeroId] || HERO_VERSIONS['goose-einstein'];
+  const skins = HERO_SKINS[userData.selectedHeroId] || [];
+  const selectedSkinId = userData.selectedSkinId?.[userData.selectedHeroId];
+  const selectedSkin = skins.find(s => s.id === selectedSkinId);
+  const currentHeroImage = selectedSkin?.image || selectedHero.image;
+  const currentModeInfo = GAME_MODES[selectedMode];
+
+  const handleApplyCode = () => {
+    const trimmedCode = code.trim().toUpperCase();
+    if (code === 'Lahazavr88@99') {
+      updateUserData({ coins: userData.coins + 10000 });
+      setSuccessMsg('+10,000 Coins!');
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        setShowCodes(false);
+        setCode('');
+        setSuccessMsg('');
+      }, 2000);
+    } else if (trimmedCode === 'TOMPEARL') {
+      updateUserData({ auraCrates: (userData.auraCrates || 0) + 3 });
+      setSuccessMsg('+3 Aura Crates!');
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        setShowCodes(false);
+        setCode('');
+        setSuccessMsg('');
+      }, 2000);
+    } else if (trimmedCode === 'MANGOLOVE') {
+      updateUserData({ mangoCrates: (userData.mangoCrates || 0) + 3 });
+      setSuccessMsg('+3 Mango Crates!');
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        setShowCodes(false);
+        setCode('');
+        setSuccessMsg('');
+      }, 2000);
+    } else if (trimmedCode === 'MANGOCASE1') {
+      updateUserData({ mangoCrates: (userData.mangoCrates || 0) + 1 });
+      setSuccessMsg('+1 Mango Crate!');
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        setShowCodes(false);
+        setCode('');
+        setSuccessMsg('');
+      }, 2000);
+    } else if (trimmedCode === 'POTUZHNOST') {
+      updateUserData({ potuzhnoCrates: (userData.potuzhnoCrates || 0) + 1 });
+      setSuccessMsg('+1 Potuzhno Crate!');
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        setShowCodes(false);
+        setCode('');
+        setSuccessMsg('');
+      }, 2000);
+    } else if (trimmedCode === '4SUBS') {
+      updateUserData({ svinemarks: (userData.svinemarks || 0) + 125 });
+      setSuccessMsg('+125 Svinemarks!');
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        setShowCodes(false);
+        setCode('');
+        setSuccessMsg('');
+      }, 2000);
+    } else if (trimmedCode === '2SUBS') {
+      updateUserData({ tomPearlCrates: (userData.tomPearlCrates || 0) + 1 });
+      setSuccessMsg('+1 Tom Pearl Crate!');
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        setShowCodes(false);
+        setCode('');
+        setSuccessMsg('');
+      }, 2000);
+    } else if (trimmedCode === 'TEST') {
+      updateUserData({ 
+        svinemarks: (userData.svinemarks || 0) + 5000,
+        trophies: (userData.trophies || 0) + 5000
+      });
+      setSuccessMsg('+5,000 Svinemarks & +5,000 Trophies!');
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        setShowCodes(false);
+        setCode('');
+        setSuccessMsg('');
+      }, 2000);
+    } else if (trimmedCode === 'SVINPASS893') {
+      updateUserData({ 
+        svinemarks: (userData.svinemarks || 0) + 75000
+      });
+      setSuccessMsg('+75,000 Svinemarks!');
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        setShowCodes(false);
+        setCode('');
+        setSuccessMsg('');
+      }, 2000);
+    } else {
+      // Shaky animation or error could go here
+    }
+  };
+
+  return (
+    <div className="w-full h-full relative flex flex-col items-center justify-between p-4 md:p-8 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
+      {/* Top Bar */}
+      <div className="w-full flex justify-between items-center z-10">
+        <div className="flex items-center gap-2 md:gap-4 bg-black/40 px-4 md:px-6 py-2 md:py-3 rounded-full backdrop-blur-md border border-white/10">
+          <div className="w-8 h-8 md:w-12 md:h-12 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white/20">
+            <UserIcon className="w-4 h-4 md:w-6 md:h-6" />
+          </div>
+          <div>
+            <div className={`text-[9px] md:text-sm font-black uppercase tracking-wider flex items-center gap-1 ${getRank(userData.trophies || 0).color.split(' ')[0]}`}>
+              <span>{getRank(userData.trophies || 0).icon}</span>
+              <span>{getRank(userData.trophies || 0).name}</span>
+            </div>
+            <div className="font-black text-sm md:text-xl italic uppercase">Meme Lord</div>
+          </div>
+          <div className="ml-2 md:ml-4 h-6 md:h-8 w-[1px] bg-white/10" />
+          
+          <div className="flex items-center gap-1 bg-black/20 p-1 rounded-xl border border-white/5 mx-2">
+            <button
+               onClick={() => setIsOnline(false)}
+               className={`px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all ${!isOnline ? 'bg-slate-700 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+               <Cpu className="w-3 h-3 md:w-4 md:h-4" />
+               <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Solo</span>
+            </button>
+            <button
+               onClick={() => setIsOnline(true)}
+               className={`px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all ${isOnline ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+               <Globe className="w-3 h-3 md:w-4 md:h-4" />
+               <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Online</span>
+            </button>
+          </div>
+
+          <div className="ml-2 md:ml-2 h-6 md:h-8 w-[1px] bg-white/10" />
+          <div className="flex items-center gap-2" title="Coins">
+            <Coins className="w-4 h-4 md:w-5 md:h-5 text-yellow-400" />
+            <span className="font-black text-sm md:text-xl">{userData.coins}</span>
+          </div>
+
+          <div className="ml-1 md:ml-2 h-6 md:h-8 w-[1px] bg-white/10" />
+          <div className="flex items-center gap-1.5 animate-pulse" title="Trophies">
+            <span className="text-sm md:text-base">🏆</span>
+            <span className="font-black text-sm md:text-xl text-yellow-500">{userData.trophies || 0}</span>
+          </div>
+
+          <div className="ml-1 md:ml-2 h-6 md:h-8 w-[1px] bg-white/10" />
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={onOpenDailyQuests}
+            className="relative flex items-center gap-2 bg-gradient-to-r from-yellow-500/10 to-amber-500/10 hover:from-yellow-500/20 hover:to-amber-500/20 text-yellow-400 px-3.5 py-1.5 rounded-full border border-yellow-500/30 transition-all font-black text-[10px] uppercase tracking-wider shadow-[0_0_10px_rgba(234,179,8,0.06)] cursor-pointer"
+          >
+            <Zap className="w-3.5 h-3.5 text-yellow-400 animate-pulse" />
+            <span>Daily Quests</span>
+            {userData.dailyQuests?.some(q => !q.claimed && q.progress >= q.target) && (
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping inline-flex absolute h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+            )}
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setShowCodes(true)}
+            className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-full border border-white/10 transition-colors cursor-pointer"
+          >
+            <Key className="w-4 h-4 text-yellow-400" />
+            <span className="text-[10px] font-black uppercase tracking-wider">Codes</span>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={onOpenAdminConsole}
+            className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 px-3.5 py-1.5 rounded-full border border-red-500/30 transition-all font-black text-[10px] uppercase tracking-wider shadow-[0_0_12px_rgba(239,68,68,0.25)] cursor-pointer"
+          >
+            <Shield className="w-3.5 h-3.5 text-white animate-pulse" />
+            <span className="text-white">Admin Abuse</span>
+          </motion.button>
+
+          {/* Active Admin Boosters List */}
+          {userData.adminLuckExpr && Date.now() < userData.adminLuckExpr && (
+            <div className="flex items-center gap-1 bg-purple-500/20 border border-purple-500/40 px-3 py-1 rounded-full text-purple-300 animate-pulse text-[9px] font-black uppercase tracking-wider select-none">
+              <span>🔮</span> {userData.adminLuckMultiplier}X Luck
+            </div>
+          )}
+          {userData.adminCoinExpr && Date.now() < userData.adminCoinExpr && (
+            <div className="flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 px-3 py-1 rounded-full text-emerald-300 animate-pulse text-[9px] font-black uppercase tracking-wider select-none">
+              <span>🪙</span> {userData.adminCoinMultiplier}X Coins
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <a
+            href="https://t.me/YTshortsstarsnews"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-sky-500 hover:bg-sky-400 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-black italic uppercase transition-all transform active:scale-90 flex items-center gap-2 shadow-[0_4px_0_rgb(3,105,161)] active:translate-y-1 active:shadow-none text-xs md:text-base cursor-pointer decoration-none"
+            style={{ textDecoration: 'none' }}
+          >
+            <Newspaper className="w-4 h-4 md:w-6 md:h-6" />
+            News
+          </a>
+
+          <button 
+             onClick={() => onNavigate(GameState.UPGRADE)}
+             className="bg-yellow-500 hover:bg-yellow-400 text-black px-4 md:px-6 py-2 md:py-3 rounded-xl font-black italic uppercase transition-all transform active:scale-90 flex items-center gap-2 shadow-[0_4px_0_rgb(202,138,4)] active:translate-y-1 active:shadow-none text-xs md:text-base"
+          >
+            <TrendingUp className="w-4 h-4 md:w-6 md:h-6" />
+            Upgrade
+          </button>
+        </div>
+      </div>
+
+      {/* Party Status / Team Controls Bar if Online */}
+      {isOnline && (
+        <div className="w-full max-w-4xl mt-3 md:mt-4 z-10 text-left">
+          <div className="bg-black/30 border border-violet-500/20 rounded-2xl md:rounded-3xl p-3 md:p-4 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 shadow-lg">
+            {partyData ? (
+              <>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl md:text-2xl animate-bounce">👾</span>
+                  <div>
+                    <div className="text-xs md:text-sm font-black text-violet-400 uppercase tracking-wider flex items-center gap-2">
+                      <span>TEAM LOBBY ACTIVE</span>
+                      <span className="bg-violet-500/20 text-violet-300 font-extrabold text-[10px] px-2 py-0.5 rounded-full border border-violet-500/30">
+                        {partyData.members.length}/2 Players
+                      </span>
+                    </div>
+                    <p className="text-[10px] md:text-xs text-gray-400 font-bold mt-0.5">
+                      Invite code: <span className="text-white font-mono uppercase tracking-wider font-extrabold bg-white/10 px-1.5 py-0.5 rounded select-all">{partyData.code}</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(partyData.code);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="bg-slate-800 hover:bg-slate-700 p-2 md:px-4 md:py-2.5 rounded-xl border border-white/10 flex items-center gap-2 text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+                  >
+                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-violet-400" />}
+                    <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy Code'}</span>
+                  </button>
+                  <button
+                    onClick={onLeaveParty}
+                    className="bg-red-650 hover:bg-red-500 p-2 md:px-4 md:py-2.5 rounded-xl border border-red-500/20 flex items-center gap-2 text-xs font-black uppercase tracking-wider text-red-100 transition-all cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Leave Team</span>
+                   </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 md:gap-3 mr-auto">
+                  <span className="text-xl md:text-2xl">👥</span>
+                  <div className="text-left">
+                    <div className="text-xs md:text-sm font-black italic uppercase text-yellow-500 tracking-wider">
+                      Play with Friends
+                    </div>
+                    <p className="text-[10px] md:text-xs text-gray-400 font-medium">Create or join a team lobby by code for co-op brawl!</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={onCreateParty}
+                    className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border border-white/10 shadow-lg cursor-pointer animate-pulse"
+                  >
+                    Create Team
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowJoinPartyModal(true)}
+                    className="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-violet-300 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border border-violet-500/20 shadow-md cursor-pointer"
+                  >
+                    Join Team
+                  </motion.button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Hero Display */}
+      <div className="flex-1 flex flex-col items-center justify-center relative min-h-0 py-4 w-full">
+        {partyData ? (
+          <div className="flex flex-col items-center justify-center w-full">
+            <div className="flex flex-row items-end justify-center gap-4 md:gap-12 max-w-4xl w-full px-4 relative mt-2 md:mt-4">
+              {/* Member 1: Host */}
+              {(() => {
+                const host = partyData.members.find(m => m.userId === partyData.hostId);
+                if (!host) return null;
+                const hHero = HERO_VERSIONS[host.heroId];
+                const hImage = host.skinImage || hHero.image;
+                return (
+                  <motion.div
+                    initial={{ x: -50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    className="flex flex-col items-center relative"
+                  >
+                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-32 md:w-48 h-8 md:h-12 bg-blue-600/20 blur-xl rounded-[100%]" />
+                    
+                    <div className="relative">
+                      <div className="w-32 h-32 md:w-56 md:h-56 rounded-3xl flex items-center justify-center relative overflow-hidden bg-slate-800/40 border-2 border-blue-500/30">
+                        {hImage ? (
+                          <img 
+                            src={hImage} 
+                            alt={hHero.name} 
+                            className="w-full h-full object-contain filter drop-shadow-2xl scale-110" 
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <span className="text-6xl md:text-8xl">🤖</span>
+                        )}
+                      </div>
+
+                      <div className="absolute -right-2 -top-2 bg-blue-600 px-3 py-1 rounded-md font-black italic border border-white/20 shadow-md text-xs">
+                        LVL {host.heroLevel}
+                      </div>
+
+                      <div className="absolute -left-2 -top-2 bg-yellow-500 text-black px-2 py-0.5 rounded-md font-black border border-white/20 shadow-md text-[10px] uppercase tracking-wider flex items-center gap-1">
+                        👑 Leader
+                      </div>
+                    </div>
+
+                    <div className="mt-4 text-center">
+                      <h3 className="text-base md:text-2xl font-black italic uppercase tracking-tight text-white flex items-center gap-1.5 justify-center">
+                        {host.name}
+                      </h3>
+                      <p className="text-blue-400 text-[10px] md:text-xs font-bold uppercase tracking-widest">{hHero.name}</p>
+                    </div>
+                  </motion.div>
+                );
+              })()}
+
+              {/* Member 2: Guest / Ally */}
+              {(() => {
+                const guest = partyData.members.find(m => m.userId !== partyData.hostId);
+                if (guest) {
+                  const gHero = HERO_VERSIONS[guest.heroId];
+                  const gImage = guest.skinImage || gHero.image;
+                  const canKick = partyData.hostId === user?.uid;
+                  return (
+                    <motion.div
+                      initial={{ x: 50, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      className="flex flex-col items-center relative"
+                    >
+                      <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-32 md:w-48 h-8 md:h-12 bg-purple-600/20 blur-xl rounded-[100%]" />
+                      
+                      <div className="relative">
+                        <div className="w-32 h-32 md:w-56 md:h-56 rounded-3xl flex items-center justify-center relative overflow-hidden bg-slate-800/40 border-2 border-purple-500/30">
+                          {gImage ? (
+                            <img 
+                              src={gImage} 
+                              alt={gHero.name} 
+                              className="w-full h-full object-contain filter drop-shadow-2xl scale-110" 
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <span className="text-6xl md:text-8xl">🤖</span>
+                          )}
+                        </div>
+
+                        <div className="absolute -right-2 -top-2 bg-purple-600 px-3 py-1 rounded-md font-black italic border border-white/20 shadow-md text-xs">
+                          LVL {guest.heroLevel}
+                        </div>
+
+                        {canKick && (
+                          <button
+                            onClick={() => onKickPartyMember(guest.userId)}
+                            className="absolute -left-2 -top-2 bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded-md font-black border border-white/20 shadow-md text-[10px] uppercase tracking-wider flex items-center gap-1 transition-colors"
+                          >
+                            <X className="w-3 h-3" /> Kick
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="mt-4 text-center">
+                        <h3 className="text-base md:text-2xl font-black italic uppercase tracking-tight text-white font-black italic uppercase">
+                          {guest.name}
+                        </h3>
+                        <p className="text-purple-400 text-[10px] md:text-xs font-bold uppercase tracking-widest">{gHero.name}</p>
+                      </div>
+                    </motion.div>
+                  );
+                } else {
+                  return (
+                    <motion.div
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 bg-slate-900/40 hover:bg-slate-900/60 transition-colors w-32 h-32 md:w-56 md:h-56 rounded-3xl relative"
+                    >
+                      <div className="text-center p-3 animate-pulse">
+                        <span className="text-3xl md:text-4xl block mb-2">👤</span>
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-500 block">Waiting team...</span>
+                        <div className="mt-2 bg-violet-600/10 border border-violet-500/20 px-3 py-1 rounded-lg">
+                          <span className="text-slate-400 text-[9px] block uppercase font-bold tracking-widest">Share Code</span>
+                          <span className="text-violet-300 font-extrabold font-mono tracking-wider text-xs md:text-sm select-all">
+                            {partyData.code}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                }
+              })()}
+            </div>
+          </div>
+        ) : (
+          <>
+            <motion.div
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="relative"
+            >
+              {/* Hero "Shadow" */}
+              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-32 md:w-48 h-8 md:h-12 bg-black/40 blur-xl rounded-[100%]" />
+              
+              {/* Hero Avatar Placeholder */}
+              <div 
+                className={`w-48 h-48 md:w-64 md:h-64 rounded-3xl flex items-center justify-center relative overflow-hidden ${!currentHeroImage ? 'border-4 border-white/20 shadow-2xl pb-4' : ''}`}
+                style={{ backgroundColor: currentHeroImage ? 'transparent' : userData.heroSkins?.[userData.selectedHeroId] }}
+              >
+                {currentHeroImage ? (
+                  <img 
+                    src={currentHeroImage} 
+                    alt={selectedHero.name} 
+                    className="w-full h-full object-contain filter drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] scale-125"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    <span className="text-8xl filter drop-shadow-lg scale-125 transform group-hover:scale-150 transition-transform">
+                      {selectedHero.id === 'goose-einstein' ? '🦢' : selectedHero.id === 'chicken' ? '🐔' : selectedHero.id === 'svinobomba' ? '🐷' : selectedHero.id === 'alcatrasnic' ? '🐹' : selectedHero.id === 'sigeon' ? '🐦' : selectedHero.id === 'bimbolit' ? '💣' : selectedHero.id === 'oreshki' ? '🐿️' : selectedHero.id === 'svin' ? '🐗' : selectedHero.id === 'smurfik' ? '🧚‍♂️' : selectedHero.id === 'pes-patron' ? '🐶' : '👾'}
+                    </span>
+                  </>
+                )}
+              </div>
+
+              <div className="absolute -right-4 -top-4 bg-blue-600 px-4 py-2 rounded-lg font-black italic border-2 border-white/20 shadow-lg rotate-12">
+                LEVEL {userData.heroLevels?.[userData.selectedHeroId] || 1}
+              </div>
+            </motion.div>
+
+            <div className="mt-6 md:mt-12 text-center flex flex-col items-center">
+              <h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter drop-shadow-xl flex items-center justify-center gap-2">
+                {selectedHero.name}
+                {userData.heroPrestige?.[userData.selectedHeroId] ? (
+                  <span className="text-yellow-400 text-2xl md:text-4xl filter drop-shadow-[0_0_8px_rgba(234,179,8,0.7)] animate-pulse">
+                    {"👑".repeat(userData.heroPrestige[userData.selectedHeroId])}
+                  </span>
+                ) : null}
+              </h1>
+              <p className="text-blue-400 text-xs md:text-sm font-bold uppercase tracking-widest mt-1 md:mt-2">{selectedHero.title}</p>
+            </div>
+          </>
+        )}
+
+        {/* Trophy Road and Battlepass Trigger Buttons */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => onNavigate(GameState.TROPHY_ROAD)}
+            className="bg-slate-900/60 hover:bg-slate-900 border border-violet-500/30 hover:border-violet-400/60 backdrop-blur px-5 py-2.5 rounded-full flex items-center gap-3 transition-all text-xs text-violet-300 font-extrabold uppercase tracking-wider shadow-lg"
+          >
+            <span className="text-sm">🏆</span>
+            <span>Trophy Road</span>
+            <span className="bg-violet-600 font-black text-white text-[10px] px-2 py-0.5 rounded-full">
+              {userData.trophies || 0}
+            </span>
+            <div className="w-[1px] h-4 bg-white/10" />
+            <span className="text-gray-400 capitalize hover:text-white flex items-center gap-1">
+              Rank: <span className="text-yellow-400 flex items-center gap-1">
+                <span>{getRank(userData.trophies || 0).icon}</span>
+                <span>{getRank(userData.trophies || 0).name}</span>
+              </span>
+            </span>
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => onNavigate(GameState.BATTLE_PASS)}
+            className="bg-slate-900/60 hover:bg-slate-900 border border-cyan-500/30 hover:border-cyan-400/60 backdrop-blur px-5 py-2.5 rounded-full flex items-center gap-3 transition-all text-xs text-cyan-300 font-extrabold uppercase tracking-wider shadow-lg animate-pulse"
+            style={{ animationDuration: '3s' }}
+          >
+            <span className="text-sm">🎫</span>
+            <span>Battlepass</span>
+            <span className="bg-cyan-600 font-black text-white text-[10px] px-2 py-0.5 rounded-full">
+              Level {getBattlepassLevel(userData.svinemarks || 0)}
+            </span>
+            <div className="w-[1px] h-4 bg-white/10" />
+            <span className="text-gray-400 capitalize hover:text-white flex items-center gap-1">
+              Marks: <span className="text-cyan-400 font-black">{userData.svinemarks || 0}</span>
+            </span>
+          </motion.button>
+        </div>
+      </div>
+
+      {/* Bottom Navigation */}
+      <div className="w-full flex flex-col items-center gap-3 md:gap-6 z-10">
+        <div className="flex items-center gap-2 text-[8px] md:text-xs font-bold text-white/20 uppercase tracking-[0.2em] animate-pulse">
+           <ArrowLeft className="w-3 h-3 md:w-4 md:h-4" />
+           <span>Swipe for Shop or Team</span>
+           <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
+        </div>
+        
+        <div className="w-full max-w-4xl flex flex-col md:flex-row items-center justify-between gap-3 md:gap-6 px-2 md:px-0">
+          <div className="flex gap-2 md:gap-4 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-hide justify-center order-2 md:order-1">
+            <NavButton 
+              icon={<Trophy className="w-5 h-5 md:w-6 md:h-6" />} 
+              label="Trophies" 
+              onClick={() => onNavigate(GameState.TROPHY_ROAD)} 
+              color="bg-amber-600"
+            />
+            <NavButton 
+              icon={<Sparkles className="w-5 h-5 md:w-6 md:h-6 px-0.5" />} 
+              label="Battlepass" 
+              onClick={() => onNavigate(GameState.BATTLE_PASS)} 
+              color="bg-cyan-600 animate-pulse"
+            />
+            <NavButton 
+              icon={<Shield className="w-5 h-5 md:w-6 md:h-6" />} 
+              label="Team" 
+              onClick={() => onNavigate(GameState.COLLECTION)} 
+              color="bg-purple-600"
+            />
+            <NavButton 
+              icon={<ShoppingBag className="w-5 h-5 md:w-6 md:h-6" />} 
+              label="Shop" 
+              onClick={() => onNavigate(GameState.SHOP)} 
+              color="bg-emerald-600"
+            />
+          </div>
+
+          {partyData ? (
+            <button
+              disabled={partyData.hostId !== user?.uid}
+              onClick={onStartPartyMatch}
+              className={`group relative w-full md:flex-1 max-w-md h-16 md:h-24 rounded-2xl md:rounded-3xl transition-all overflow-hidden order-1 md:order-2 ${
+                partyData.hostId === user?.uid 
+                  ? 'bg-gradient-to-r from-violet-600 to-purple-500 text-white font-extrabold shadow-[0_6px_0_rgb(109,40,217)] md:shadow-[0_10px_0_rgb(109,40,217)] active:translate-y-2 active:shadow-none cursor-pointer'
+                  : 'bg-slate-800 text-slate-500 border border-slate-700/60 shadow-none scale-100 select-none opacity-80'
+              }`}
+            >
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative h-full flex items-center justify-center gap-3 md:gap-4">
+                <span className="text-2xl md:text-4xl font-black italic uppercase tracking-widest drop-shadow-sm">
+                  {partyData.hostId === user?.uid ? 'START BRAWL' : 'WAIT FOR HOST'}
+                </span>
+                {partyData.hostId === user?.uid ? (
+                  <Play className="w-6 h-6 md:w-10 md:h-10 text-white fill-white animate-pulse" />
+                ) : (
+                  <Loader2 className="w-6 h-6 md:w-10 md:h-10 animate-spin text-slate-600" />
+                )}
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                if (isOnline) {
+                  setShowMultiplayerOptions(true);
+                } else {
+                  onPlaySolo();
+                }
+              }}
+              className="group relative w-full md:flex-1 max-w-md h-16 md:h-24 rounded-2xl md:rounded-3xl shadow-[0_6px_0_rgb(194,65,12)] md:shadow-[0_10px_0_rgb(194,65,12)] active:translate-y-2 active:shadow-none transition-all overflow-hidden order-1 md:order-2 bg-gradient-to-r from-yellow-400 to-orange-500"
+            >
+              <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative h-full flex items-center justify-center gap-3 md:gap-4">
+                <span className="text-2xl md:text-4xl font-black italic uppercase tracking-widest drop-shadow-sm">
+                  {isOnline ? 'Online Play' : 'Play Solo'}
+                </span>
+                <Play className="w-6 h-6 md:w-10 md:h-10 text-black fill-black" />
+              </div>
+            </button>
+          )}
+
+          <button 
+             onClick={() => setShowModes(true)}
+             className="w-full md:w-56 bg-slate-800/80 border-2 border-white/10 hover:border-yellow-500/50 p-4 rounded-2xl md:rounded-3xl flex flex-col items-center md:items-end justify-center order-3 transition-all relative overflow-hidden group shadow-xl"
+          >
+             <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-40 transition-opacity">
+                {currentModeInfo.icon}
+             </div>
+             <div className="text-[8px] md:text-xs text-gray-400 font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                Game Mode <ChevronDown className="w-3 h-3 group-hover:translate-y-1 transition-transform" />
+             </div>
+             <div className="text-sm md:text-xl font-black italic uppercase text-yellow-500">
+               {currentModeInfo.name}
+             </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Modes Modal */}
+      <AnimatePresence>
+        {showModes && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 50 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 50 }}
+              className="w-full max-w-2xl bg-slate-900 border-4 border-white/10 rounded-[3rem] p-8 lg:p-12 relative shadow-[0_0_100px_rgba(0,0,0,0.5)]"
+            >
+               <button 
+                onClick={() => setShowModes(false)}
+                className="absolute top-8 right-8 p-3 hover:bg-white/5 rounded-full transition-colors"
+                id="close-modes"
+              >
+                <X className="w-8 h-8 text-gray-400" />
+              </button>
+
+              <div className="text-center mb-12">
+                <h3 className="text-5xl font-black italic uppercase tracking-tighter mb-4 underline decoration-yellow-500 decoration-8 underline-offset-4">Select Mode</h3>
+                <p className="text-gray-400 text-sm font-bold uppercase tracking-[0.3em]">Choose your arena, master the meme</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {(Object.entries(GAME_MODES) as [GameMode, any][]).map(([mode, info]) => (
+                   <motion.button
+                      key={mode}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        onSelectMode(mode);
+                        setShowModes(false);
+                      }}
+                      className={`relative p-6 rounded-[2rem] border-4 transition-all flex flex-col items-center text-center gap-4 ${
+                        selectedMode === mode 
+                        ? 'bg-yellow-500/10 border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.2)]' 
+                        : 'bg-white/5 border-white/5 hover:border-white/20'
+                      }`}
+                   >
+                      <div className={`w-20 h-20 rounded-2xl flex items-center justify-center text-5xl mb-2 ${selectedMode === mode ? 'bg-yellow-500 text-black' : 'bg-white/10'}`}>
+                        {info.icon}
+                      </div>
+                      <div>
+                        <div className={`text-xl font-black italic uppercase ${selectedMode === mode ? 'text-yellow-500' : 'text-white'}`}>{info.name}</div>
+                        <div className="text-[10px] text-gray-500 font-bold uppercase mt-2 leading-relaxed px-2">{info.description}</div>
+                      </div>
+                      {selectedMode === mode && (
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-500 text-black px-4 py-1 rounded-full text-[10px] font-black uppercase italic shadow-lg">Current</div>
+                      )}
+                   </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Codes Modal */}
+      <AnimatePresence>
+        {showCodes && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="w-full max-w-sm bg-slate-800 border-4 border-yellow-500 rounded-[2.5rem] p-8 relative shadow-2xl"
+            >
+              <button 
+                onClick={() => setShowCodes(false)}
+                className="absolute top-6 right-6 p-2 hover:bg-white/5 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-400" />
+              </button>
+
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-yellow-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-yellow-500/20">
+                  <Key className="w-8 h-8 text-yellow-500" />
+                </div>
+                <h3 className="text-3xl font-black italic uppercase tracking-tighter">Enter Code</h3>
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-2">Unleash the secret loot</p>
+              </div>
+
+              {success ? (
+                <motion.div
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="flex flex-col items-center gap-4 py-4"
+                >
+                  <CheckCircle2 className="w-16 h-16 text-emerald-500" />
+                  <div className="text-2xl font-black italic uppercase text-emerald-400">{successMsg}</div>
+                </motion.div>
+              ) : (
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder="SECRET_CODE_HERE"
+                    className="w-full bg-black/40 border-2 border-white/10 rounded-2xl px-6 py-4 font-mono text-center tracking-[0.2em] text-white focus:border-yellow-500 outline-none transition-colors"
+                  />
+                  <button
+                    onClick={handleApplyCode}
+                    disabled={!code}
+                    className="w-full bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 disabled:grayscale text-black py-4 rounded-2xl font-black italic text-xl uppercase tracking-widest shadow-[0_6px_0_rgb(202,138,4)] active:translate-y-1 active:shadow-none transition-all"
+                  >
+                    Redeem
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Join Party Modal */}
+      <AnimatePresence>
+        {showJoinPartyModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="w-full max-w-sm bg-slate-800 border-4 border-violet-500 rounded-[2.5rem] p-8 relative shadow-2xl"
+            >
+              <button 
+                onClick={() => {
+                  setShowJoinPartyModal(false);
+                  setPartyJoinCode('');
+                  setPartyJoinError('');
+                }}
+                className="absolute top-6 right-6 p-2 hover:bg-white/5 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-400" />
+              </button>
+
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-violet-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-violet-500/20">
+                  <Key className="w-8 h-8 text-violet-400 font-extrabold" />
+                </div>
+                <h3 className="text-3xl font-black italic uppercase tracking-tighter text-white">Join Team</h3>
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-2">Enter the team lobby code</p>
+              </div>
+
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={partyJoinCode}
+                  onChange={(e) => {
+                    setPartyJoinCode(e.target.value.toUpperCase().slice(0, 6));
+                    setPartyJoinError('');
+                  }}
+                  placeholder="CODE"
+                  className="w-full bg-black/40 border-2 border-white/10 rounded-2xl px-6 py-4 font-mono text-center text-3xl tracking-[0.3em] font-extrabold text-white focus:border-violet-500 outline-none transition-colors"
+                />
+
+                {partyJoinError && (
+                  <div className="text-red-400 text-xs font-black text-center bg-red-400/10 p-3 rounded-xl border border-red-500/20">
+                    {partyJoinError}
+                  </div>
+                )}
+
+                <button
+                  onClick={async () => {
+                    if (!partyJoinCode || partyJoinCode.length < 6) return;
+                    setPartyJoining(true);
+                    setPartyJoinError('');
+                    const success = await onJoinParty(partyJoinCode);
+                    setPartyJoining(false);
+                    if (success) {
+                      setShowJoinPartyModal(false);
+                    } else {
+                      setPartyJoinError('LOBBY NOT FOUND OR FULL');
+                    }
+                  }}
+                  disabled={partyJoinCode.length < 6 || partyJoining}
+                  className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:grayscale text-white py-4 rounded-2xl font-black italic text-xl uppercase tracking-widest shadow-[0_6px_0_rgb(109,40,217)] active:translate-y-1 active:shadow-none transition-all cursor-pointer"
+                >
+                  {partyJoining ? 'Joining...' : 'Redeem & Join'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Custom Multiplayer Options Modal */}
+      <AnimatePresence>
+        {showMultiplayerOptions && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 text-white"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 30 }}
+              className="w-full max-w-sm bg-slate-900 border-4 border-slate-700/80 rounded-[2.5rem] p-8 relative shadow-2xl"
+            >
+              <button 
+                onClick={() => {
+                  setShowMultiplayerOptions(false);
+                  setMultiplayerOption('selection');
+                  setJoinCode('');
+                  setJoinError('');
+                }}
+                className="absolute top-6 right-6 p-2 hover:bg-white/5 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-400" />
+              </button>
+
+              {multiplayerOption === 'selection' ? (
+                <div className="space-y-6">
+                  <div className="text-center mb-8">
+                    <h3 className="text-3xl font-black italic uppercase tracking-tighter text-yellow-500">Meme Multiplayer</h3>
+                    <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-2">Choose your custom lobby option</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <button
+                      onClick={async () => {
+                        setShowMultiplayerOptions(false);
+                        await onCreateCustomRoom();
+                      }}
+                      className="w-full bg-slate-800 border-2 border-slate-700 hover:border-yellow-500 hover:bg-slate-700/50 p-6 rounded-2xl flex items-center gap-4 text-left transition-all group"
+                    >
+                      <div className="w-12 h-12 bg-yellow-500/10 rounded-xl flex items-center justify-center group-hover:bg-yellow-500 group-hover:text-black transition-all shrink-0">
+                        <Shield className="w-6 h-6 text-yellow-500 group-hover:text-black" />
+                      </div>
+                      <div>
+                        <div className="font-black italic uppercase text-base text-white">Create Private Lobby</div>
+                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">Host a match, get a code, share with friends!</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setMultiplayerOption('join')}
+                      className="w-full bg-slate-800 border-2 border-slate-700 hover:border-blue-500 hover:bg-slate-700/50 p-6 rounded-2xl flex items-center gap-4 text-left transition-all group"
+                    >
+                      <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center group-hover:bg-blue-500 group-hover:text-black transition-all shrink-0">
+                        <Key className="w-6 h-6 text-blue-500 group-hover:text-black" />
+                      </div>
+                      <div>
+                        <div className="font-black italic uppercase text-base text-white">Join with Room Code</div>
+                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">Enter a friend's 5-digit code to join!</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-center mb-6">
+                    <h3 className="text-3xl font-black italic uppercase tracking-tighter text-blue-400">Join Lobby</h3>
+                    <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-2">Enter the shareable room code</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      maxLength={5}
+                      value={joinCode}
+                      onChange={(e) => {
+                        setJoinCode(e.target.value.toUpperCase().slice(0, 5));
+                        setJoinError('');
+                      }}
+                      placeholder="ENTER CODE"
+                      className="w-full bg-black/40 border-2 border-white/10 rounded-2xl px-6 py-4 font-mono text-center text-2xl tracking-[0.3em] text-white focus:border-blue-500 outline-none transition-colors"
+                    />
+
+                    {joinError && (
+                      <div className="flex items-center gap-2 text-red-400 bg-red-400/10 p-3 rounded-xl border border-red-500/20 text-[10px] font-bold uppercase tracking-wider justify-center">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>{joinError}</span>
+                      </div>
+                    )}
+
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => {
+                          setMultiplayerOption('selection');
+                          setJoinCode('');
+                          setJoinError('');
+                        }}
+                        className="flex-1 bg-slate-800 hover:bg-slate-700 text-white py-4 rounded-xl font-bold uppercase text-xs tracking-wider transition-all border border-slate-700 active:translate-y-0.5"
+                      >
+                        Back
+                      </button>
+
+                      <button
+                        onClick={async () => {
+                          if (!joinCode || joinCode.length < 5) return;
+                          setJoining(true);
+                          setJoinError('');
+                          try {
+                            await onJoinCustomRoom(joinCode);
+                            setShowMultiplayerOptions(false);
+                            setMultiplayerOption('selection');
+                            setJoinCode('');
+                          } catch (err: any) {
+                            setJoinError(err?.message || "Failed to join room.");
+                          } finally {
+                            setJoining(false);
+                          }
+                        }}
+                        disabled={joining || joinCode.length < 5}
+                        className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 disabled:opacity-50 text-white py-4 rounded-xl font-black italic text-base uppercase tracking-widest shadow-[0_4px_0_rgb(29,78,216)] active:translate-y-0.5 transition-all flex items-center justify-center gap-2"
+                      >
+                        {joining ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <>
+                            <UserPlus className="w-5 h-5" />
+                            JOIN
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Beautiful High-Contrast Full Screen Lobby Overlay */}
+      <AnimatePresence>
+        {isSearching && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 text-white"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 30 }}
+              className="w-full max-w-lg bg-slate-900 border-4 border-slate-700 rounded-[3rem] p-6 md:p-8 flex flex-col gap-6 text-center shadow-[0_0_80px_rgba(30,41,59,0.3)]"
+            >
+              <div>
+                <span className="text-[10px] md:text-sm font-black uppercase tracking-[0.2em] text-blue-400">Custom Game Lobby</span>
+                <h3 className="text-4xl font-black italic uppercase tracking-tighter mt-1 text-white">READY UP</h3>
+              </div>
+
+              {/* Shareable Code Card */}
+              <div className="bg-slate-950/60 p-5 rounded-[2rem] border-2 border-white/5 flex flex-col items-center justify-center gap-1.5 relative overflow-hidden group">
+                <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-gray-500 leading-none">Share Room Code</span>
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-3xl md:text-4xl font-black uppercase tracking-[0.3em] text-yellow-400 pl-[0.3em]">
+                    {searchingData?.code || '-----'}
+                  </span>
+                  
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => {
+                      if (searchingData?.code) {
+                        navigator.clipboard.writeText(searchingData.code);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }
+                    }}
+                    className="p-2 border border-white/10 hover:border-yellow-500 rounded-xl bg-slate-800 transition-all text-yellow-500 active:translate-y-px"
+                  >
+                    {copied ? <Check className="w-5 h-5 text-emerald-500" /> : <Copy className="w-5 h-5" />}
+                  </motion.button>
+                </div>
+                {copied && (
+                  <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest">Code Copied!</span>
+                )}
+              </div>
+
+              {/* Connected Players list */}
+              <div className="flex flex-col gap-3 flex-1 min-h-[140px] justify-center">
+                <div className="text-left text-[10px] font-mono text-gray-500 uppercase tracking-widest">
+                  Players ({searchingData?.playersCount || 0}/2)
+                </div>
+
+                <div className="space-y-3">
+                  {searchingData?.players && searchingData.players.length > 0 ? (
+                    searchingData.players.map((p, idx) => {
+                      const hero = HERO_VERSIONS[p.heroId] || HERO_VERSIONS['goose-einstein'];
+                      return (
+                        <motion.div 
+                          key={p.userId || idx}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.1 }}
+                          className="flex items-center justify-between bg-black/40 p-4 rounded-2xl border border-white/5"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl bg-slate-800/80 w-12 h-12 rounded-xl flex items-center justify-center border border-white/10">
+                              {hero.id === 'goose-einstein' ? '🦢' : hero.id === 'chicken' ? '🐔' : hero.id === 'sigeon' ? '🐦' : hero.id === 'svinobomba' ? '🐷' : hero.id === 'alcatrasnic' ? '🐹' : hero.id === 'bimbolit' ? '💣' : hero.id === 'oreshki' ? '🐿️' : hero.id === 'svin' ? '🐗' : hero.id === 'aura-tom' ? '🎻' : hero.id === 'smurfik' ? '🧚‍♂️' : hero.id === 'pes-patron' ? '🐶' : '👾'}
+                            </span>
+                            <div className="text-left">
+                              <div className="font-bold text-white text-sm md:text-base flex items-center gap-1.5">
+                                <span>{p.name}</span>
+                                {p.userId === user?.uid && (
+                                  <span className="text-[9px] bg-slate-700/80 px-1.5 py-0.5 rounded text-slate-300 font-normal">You</span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-gray-400 capitalize">{hero.name}</div>
+                            </div>
+                          </div>
+                          
+                          <span className={`text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider ${idx === 0 ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-blue-500/20 text-blue-400 border border-blue-500/30"}`}>
+                            {idx === 0 ? "Host" : "Joined"}
+                          </span>
+                        </motion.div>
+                      );
+                    })
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-6 text-gray-500">
+                      <Loader2 className="w-8 h-8 animate-spin mb-2 text-yellow-500/40" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Populating Room Players...</span>
+                    </div>
+                  )}
+
+                  {/* Empty Slot when only 1 player */}
+                  {(searchingData?.playersCount || 0) < 2 && (
+                    <div className="flex items-center justify-center border-2 border-dashed border-white/10 p-5 rounded-2xl text-gray-500 h-[72px]">
+                      <span className="text-[10px] font-black uppercase tracking-widest animate-pulse">Waiting for Opponent...</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions Section */}
+              <div className="flex flex-col gap-3 pt-2">
+                {searchingData?.isHost ? (
+                  <div className="flex flex-col gap-2.5">
+                    {selectedMode === GameMode.BOSS_FIGHT && searchingData.playersCount < 2 ? (
+                      <button
+                        className="w-full bg-slate-800 text-slate-500 py-4 rounded-2xl font-black italic text-xl uppercase tracking-widest cursor-not-allowed border border-slate-700"
+                        disabled
+                      >
+                        REQUIRES 2 PLAYERS
+                      </button>
+                    ) : (
+                      <button
+                        onClick={onForceStart}
+                        className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-black py-4 rounded-2xl font-black italic text-xl uppercase tracking-widest shadow-[0_6px_0_rgb(194,65,12)] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2"
+                      >
+                        <Play className="w-5 h-5 fill-black text-black" />
+                        {searchingData.playersCount >= 2 ? "START MATCH" : "START WITH BOTS"}
+                      </button>
+                    )}
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                      {selectedMode === GameMode.BOSS_FIGHT 
+                        ? `Lobby status: ${searchingData.playersCount}/2 players. 2 required to start Boss Fight.`
+                        : searchingData.playersCount >= 2 ? "Both players found! Hit start to enter arena." : "Lobby has empty slots. You can optionally start with bots."}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="bg-slate-950/40 p-4 rounded-2xl border border-white/5 flex items-center justify-center gap-3">
+                    <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
+                    <span className="text-xs font-bold text-blue-300 uppercase tracking-wider">Waiting for Host to start match...</span>
+                  </div>
+                )}
+
+                <button
+                  onClick={onCancelSearch}
+                  className="w-full bg-slate-800 hover:bg-slate-700/80 text-red-400 border border-red-500/20 hover:border-red-500/40 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest italic transition-all flex items-center justify-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Leave Lobby Room
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function NavButton({ icon, label, onClick, color, disabled = false }: { 
+  icon: React.ReactNode; 
+  label: string; 
+  onClick: () => void; 
+  color: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`${color} ${disabled ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:scale-105 active:scale-95'} p-3 md:p-4 rounded-3xl flex flex-col items-center gap-2 transition-all shadow-[0_6px_0_rgba(0,0,0,0.3)] min-w-[80px] md:min-w-[100px] border border-white/10`}
+    >
+      {icon}
+      <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">{label}</span>
+    </button>
+  );
+}

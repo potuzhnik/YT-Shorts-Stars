@@ -1,0 +1,175 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // --- Room Validation ---
+    function isValidRoom(data) {
+      return data.keys().hasAll(['status', 'mode', 'hostId', 'scores', 'createdAt', 'playerCount', 'code']) &&
+             data.status in ['lobby', 'starting', 'playing', 'finished'] &&
+             data.mode is string && data.mode.size() <= 64 &&
+             data.hostId is string && data.hostId.size() <= 128 &&
+             data.code is string && data.code.size() <= 12 &&
+             data.scores is map && data.scores.blue is number && data.scores.red is number &&
+             data.playerCount is number && data.playerCount <= 10;
+    }
+
+    function isRoomHost(roomId) {
+      return isSignedIn() && get(/databases/$(database)/documents/rooms/$(roomId)).data.hostId == request.auth.uid;
+    }
+
+    // --- Party Validation ---
+    function isValidParty(data) {
+      return data.keys().hasAll(['code', 'hostId', 'members', 'gameMode', 'status', 'createdAt']) &&
+             data.code is string && data.code.size() == 6 &&
+             data.hostId is string && data.hostId.size() <= 128 &&
+             data.members is list && data.members.size() >= 1 && data.members.size() <= 2 &&
+             data.gameMode is string && data.gameMode.size() <= 64 &&
+             data.status in ['lobby', 'match_starting', 'playing'];
+    }
+
+    // --- Player Validation ---
+    function isValidPlayer(data) {
+      return data.keys().hasAll(['userId', 'name', 'heroId', 'x', 'y', 'rotation', 'health', 'maxHealth', 'ammo', 'coins', 'team', 'lastUpdated']) &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() <= 32 &&
+             data.heroId is string && data.heroId.size() <= 64 &&
+             data.x is number && data.y is number && data.rotation is number &&
+             data.health is number && data.health <= data.maxHealth &&
+             data.maxHealth is number &&
+             data.ammo is number &&
+             data.coins is number &&
+             data.team in ['blue', 'red', 'green', 'yellow'] &&
+             data.lastUpdated is number;
+    }
+
+    // --- Rules ---
+
+    match /rooms/{roomId} {
+      allow get: if isSignedIn() && isValidId(roomId);
+      allow list: if isSignedIn() && resource.data.status == 'lobby';
+
+      allow create: if isSignedIn() && isValidId(roomId) && isValidRoom(incoming()) && 
+                      incoming().hostId == request.auth.uid && 
+                      incoming().createdAt == request.time &&
+                      incoming().playerCount == 1;
+
+      allow update: if isSignedIn() && isValidId(roomId) && isValidRoom(incoming()) && 
+                      incoming().createdAt == existing().createdAt && (
+        // Action: Host updates (status, scores, etc)
+        (isRoomHost(roomId) && incoming().hostId == existing().hostId && 
+         incoming().diff(existing()).affectedKeys().hasAny(['status', 'scores', 'timeLeft', 'playerCount'])) ||
+        // Action: Join or Leave (anyone can increment/decrement playerCount within bounds)
+        // We allow anyone to update playerCount if they only change that field and it's a +/- 1 step
+        (incoming().diff(existing()).affectedKeys().hasOnly(['playerCount']) && 
+         (incoming().playerCount == existing().playerCount + 1 || incoming().playerCount == existing().playerCount - 1) &&
+         incoming().playerCount >= 0 && incoming().playerCount <= 10)
+      );
+
+      match /players/{userId} {
+        allow get: if isSignedIn() && isValidId(roomId) && isValidId(userId);
+        allow list: if isSignedIn() && isValidId(roomId);
+        
+        allow create: if isSignedIn() && isValidId(roomId) && isValidId(userId) && 
+                      isOwner(userId) && isValidPlayer(incoming()) &&
+                      exists(/databases/$(database)/documents/rooms/$(roomId));
+
+        allow update: if isSignedIn() && isValidId(roomId) && isValidId(userId) && isValidPlayer(incoming()) && (
+          // Player updates their own state
+          (isOwner(userId) && incoming().userId == existing().userId && 
+           incoming().diff(existing()).affectedKeys().hasAny(['x', 'y', 'rotation', 'health', 'ammo', 'coins', 'lastUpdated', 'lastShot'])) ||
+          // Host can update player health (damage)
+          (isRoomHost(roomId) && incoming().diff(existing()).affectedKeys().hasOnly(['health']))
+        );
+
+        allow delete: if isSignedIn() && (isOwner(userId) || isRoomHost(roomId));
+      }
+    }
+
+    match /parties/{partyId} {
+      allow get: if isSignedIn() && isValidId(partyId);
+      allow list: if isSignedIn() && resource.data.status == 'lobby';
+
+      allow create: if isSignedIn() && isValidId(partyId) && isValidParty(incoming()) && 
+                      incoming().hostId == request.auth.uid && 
+                      incoming().createdAt == request.time &&
+                      incoming().members.size() == 1 &&
+                      incoming().members[0].userId == request.auth.uid;
+
+      allow update: if isSignedIn() && isValidId(partyId) && isValidParty(incoming()) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().code == existing().code && (
+        // Action: Join party
+        (incoming().diff(existing()).affectedKeys().hasOnly(['members']) &&
+         existing().members.size() == 1 &&
+         incoming().members.size() == 2 &&
+         incoming().members[0].userId == existing().members[0].userId &&
+         incoming().members[1].userId == request.auth.uid) ||
+
+        // Action: Update member selections inside array (Hero, skin, levels, etc.)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['members']) &&
+         incoming().members.size() == existing().members.size() && (
+           (existing().members.size() == 1 && incoming().members[0].userId == request.auth.uid) ||
+           (existing().members.size() == 2 && (
+             (incoming().members[0].userId == request.auth.uid && incoming().members[0].userId == existing().members[0].userId && incoming().members[1] == existing().members[1]) ||
+             (incoming().members[1].userId == request.auth.uid && incoming().members[1].userId == existing().members[1].userId && incoming().members[0] == existing().members[0])
+           ))
+         )) ||
+
+        // Action: Leave/Kick (Guest leaves or Host kicks guest)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['members']) &&
+         existing().members.size() == 2 &&
+         incoming().members.size() == 1 &&
+         incoming().hostId == existing().hostId &&
+         (existing().members[1].userId == request.auth.uid || existing().hostId == request.auth.uid) &&
+         incoming().members[0].userId == existing().members[0].userId) ||
+
+        // Action: Host leaves (Host is [0] and assigns guest [1] as new host)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['members', 'hostId']) &&
+         existing().members.size() == 2 &&
+         incoming().members.size() == 1 &&
+         existing().hostId == request.auth.uid &&
+         incoming().hostId == existing().members[1].userId &&
+         incoming().members[0].userId == existing().members[1].userId) ||
+
+        // Action: Host state changes (status, matchRoomId, gameMode)
+        (existing().hostId == request.auth.uid &&
+         incoming().hostId == existing().hostId &&
+         incoming().members == existing().members &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'matchRoomId', 'gameMode']))
+      );
+
+      allow delete: if isSignedIn() && isValidId(partyId) && 
+                      existing().members.size() == 1 && 
+                      existing().members[0].userId == request.auth.uid;
+    }
+
+    match /admin_broadcast/{id} {
+      allow read, write: if isSignedIn() && isValidId(id);
+    }
+  }
+}

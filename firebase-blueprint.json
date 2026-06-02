@@ -1,0 +1,228 @@
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  updateDoc, 
+  onSnapshot, 
+  query, 
+  where, 
+  getDocs, 
+  addDoc, 
+  serverTimestamp,
+  deleteDoc,
+  getDoc,
+  limit
+} from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from './firebase';
+import { GameMode, HeroId } from '../types';
+
+export interface PartyMember {
+  userId: string;
+  name: string;
+  heroId: HeroId;
+  skinImage?: string | null;
+  heroLevel: number;
+  prestigeLevel: number;
+}
+
+export interface PartyData {
+  id: string;
+  code: string;
+  hostId: string;
+  members: PartyMember[];
+  gameMode: GameMode;
+  status: 'lobby' | 'match_starting' | 'playing';
+  matchRoomId?: string;
+  createdAt: any;
+}
+
+const generatePartyCode = () => {
+  return Array.from({ length: 6 }, () => 
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.charAt(Math.floor(Math.random() * 36))
+  ).join('');
+};
+
+export const createParty = async (
+  userId: string, 
+  name: string, 
+  heroId: HeroId, 
+  skinImage: string | null, 
+  heroLevel: number,
+  prestigeLevel: number,
+  gameMode: GameMode
+): Promise<{ partyId: string; code: string }> => {
+  const partiesRef = collection(db, 'parties');
+  const code = generatePartyCode();
+
+  console.log(`createParty: Creating party with code ${code}...`);
+  try {
+    const hostMember: PartyMember = {
+      userId,
+      name,
+      heroId,
+      skinImage,
+      heroLevel,
+      prestigeLevel
+    };
+
+    const docRef = await addDoc(partiesRef, {
+      code,
+      hostId: userId,
+      members: [hostMember],
+      gameMode,
+      status: 'lobby',
+      createdAt: serverTimestamp(),
+    });
+
+    console.log(`createParty: Created party ${docRef.id} with code ${code}`);
+    return { partyId: docRef.id, code };
+  } catch (error) {
+    console.error("createParty: addDoc failed", error);
+    return handleFirestoreError(error, OperationType.CREATE, 'parties') as any;
+  }
+};
+
+export const joinPartyByCode = async (
+  code: string, 
+  userId: string, 
+  name: string, 
+  heroId: HeroId, 
+  skinImage: string | null, 
+  heroLevel: number,
+  prestigeLevel: number
+): Promise<string> => {
+  const partiesRef = collection(db, 'parties');
+  const upperCode = code.trim().toUpperCase();
+  console.log(`joinPartyByCode: Searching for party with code ${upperCode}...`);
+
+  const q = query(
+    partiesRef,
+    where('status', '==', 'lobby'),
+    where('code', '==', upperCode),
+    limit(1)
+  );
+
+  const querySnapshot = await getDocs(q);
+  if (querySnapshot.empty) {
+    throw new Error("Party not found or already started.");
+  }
+
+  const partyDoc = querySnapshot.docs[0];
+  const partyId = partyDoc.id;
+  const partyData = partyDoc.data() as Omit<PartyData, 'id'>;
+
+  const currentMembers = partyData.members || [];
+  if (currentMembers.length >= 2) {
+    throw new Error("Party is full.");
+  }
+
+  // Check if player is already in this party
+  const exists = currentMembers.some(m => m.userId === userId);
+  if (!exists) {
+    const newMember: PartyMember = {
+      userId,
+      name,
+      heroId,
+      skinImage,
+      heroLevel,
+      prestigeLevel
+    };
+
+    const updatedMembers = [...currentMembers, newMember];
+    const partyRef = doc(db, 'parties', partyId);
+    try {
+      await updateDoc(partyRef, {
+        members: updatedMembers
+      });
+    } catch (error) {
+      console.error("joinPartyByCode update members failed", error);
+      throw new Error("Could not join party.");
+    }
+  }
+
+  return partyId;
+};
+
+export const leaveParty = async (partyId: string, userId: string): Promise<void> => {
+  const partyRef = doc(db, 'parties', partyId);
+  try {
+    const pDoc = await getDoc(partyRef);
+    if (!pDoc.exists()) return;
+
+    const partyData = pDoc.data() as PartyData;
+    const currentMembers = partyData.members || [];
+    const remainingMembers = currentMembers.filter(m => m.userId !== userId);
+
+    if (remainingMembers.length === 0) {
+      // Delete empty party
+      await deleteDoc(partyRef);
+    } else {
+      // If host left, assign remaining player as host
+      const isHost = partyData.hostId === userId;
+      const newHostId = isHost ? remainingMembers[0].userId : partyData.hostId;
+      await updateDoc(partyRef, {
+        members: remainingMembers,
+        hostId: newHostId
+      });
+    }
+  } catch (error) {
+    console.error("leaveParty failed", error);
+  }
+};
+
+const cleanObject = (obj: any) => {
+  const cleaned: any = {};
+  for (const key in obj) {
+    if (obj[key] !== undefined) {
+      cleaned[key] = obj[key];
+    }
+  }
+  return cleaned;
+};
+
+export const updatePartyState = async (partyId: string, updates: Partial<PartyData>): Promise<void> => {
+  const partyRef = doc(db, 'parties', partyId);
+  try {
+    await updateDoc(partyRef, cleanObject(updates));
+  } catch (error) {
+    console.error("updatePartyState failed", error);
+  }
+};
+
+export const updateMemberSelection = async (
+  partyId: string, 
+  userId: string, 
+  updates: Partial<Omit<PartyMember, 'userId' | 'name'>>
+): Promise<void> => {
+  const partyRef = doc(db, 'parties', partyId);
+  try {
+    const pDoc = await getDoc(partyRef);
+    if (!pDoc.exists()) return;
+
+    const partyData = pDoc.data() as PartyData;
+    const currentMembers = partyData.members || [];
+    const updatedMembers = currentMembers.map(m => {
+      if (m.userId === userId) {
+        return { ...m, ...updates };
+      }
+      return m;
+    });
+
+    await updateDoc(partyRef, {
+      members: updatedMembers
+    });
+  } catch (error) {
+    console.error("updateMemberSelection failed", error);
+  }
+};
+
+export const subscribeToParty = (partyId: string, callback: (data: PartyData) => void) => {
+  const path = `parties/${partyId}`;
+  return onSnapshot(doc(db, 'parties', partyId), (doc) => {
+    if (doc.exists()) {
+      callback({ id: doc.id, ...doc.data() } as PartyData);
+    }
+  }, (error) => {
+    handleFirestoreError(error, OperationType.GET, path);
+  });
+};

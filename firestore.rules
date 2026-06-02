@@ -1,0 +1,197 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+
+interface Mango {
+  id: string;
+  x: number; // percentage (0-100)
+  y: number; // pixels custom y
+  speed: number;
+  size: number;
+  rotation: number;
+  rotationSpeed: number;
+  swayAmplitude: number;
+  swayFrequency: number;
+  createdAt: number;
+}
+
+interface TextPopup {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+}
+
+interface MangoRainOverlayProps {
+  isActive: boolean;
+  expiry: number;
+  onEarnMango: (amount: number) => void;
+}
+
+export default function MangoRainOverlay({ isActive, expiry, onEarnMango }: MangoRainOverlayProps) {
+  const [mangoes, setMangoes] = useState<Mango[]>([]);
+  const [popups, setPopups] = useState<TextPopup[]>([]);
+  const mangoIdCounter = useRef(0);
+  const popupIdCounter = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Animation ticks
+  useEffect(() => {
+    if (!isActive || Date.now() > expiry) {
+      if (mangoes.length > 0) {
+        setMangoes([]);
+      }
+      return;
+    }
+
+    let animationFrameId: number;
+    let lastSpawnTime = 0;
+
+    const tick = () => {
+      const now = Date.now();
+      if (now > expiry) {
+        setMangoes([]);
+        return;
+      }
+
+      setMangoes(prev => {
+        // Update physics
+        let updated = prev.map(m => {
+          const age = (now - m.createdAt) / 1000;
+          const sway = Math.sin(age * m.swayFrequency * Math.PI * 2) * m.swayAmplitude;
+          return {
+            ...m,
+            y: m.y + m.speed,
+            rotation: m.rotation + m.rotationSpeed,
+            // Offset fallback sway inside final rendering
+          };
+        });
+
+        // Filter out off-screen mangoes (window.innerHeight + 100 fallback)
+        const heightLimit = window.innerHeight + 100;
+        updated = updated.filter(m => m.y < heightLimit);
+
+        // Max 30 mangoes simultaneously to protect performance
+        if (updated.length < 25 && now - lastSpawnTime > 300) {
+          lastSpawnTime = now;
+          mangoIdCounter.current += 1;
+          updated.push({
+            id: `mango-${mangoIdCounter.current}`,
+            x: Math.random() * 90 + 5, // 5% - 95%
+            y: -80,
+            speed: Math.random() * 3.5 + 2.5, // 2.5 - 6.0 pixels per frame
+            size: Math.random() * 25 + 35, // 35px - 60px size
+            rotation: Math.random() * 360,
+            rotationSpeed: Math.random() * 4 - 2, // -2 to 2 degrees per tick
+            swayAmplitude: Math.random() * 15 + 5, // sway width
+            swayFrequency: Math.random() * 0.5 + 0.2, // speed of sway
+            createdAt: now,
+          });
+        }
+
+        return updated;
+      });
+
+      animationFrameId = requestAnimationFrame(tick);
+    };
+
+    animationFrameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [isActive, expiry]);
+
+  const handleMangoClick = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    const clickedMango = mangoes.find(m => m.id === id);
+    if (!clickedMango) return;
+
+    // Trigger score increment callback
+    onEarnMango(5);
+
+    // Filter out clicked mango immediately to avoid double clicks
+    setMangoes(prev => prev.filter(m => m.id !== id));
+
+    // Spawn popping floaty text popup
+    popupIdCounter.current += 1;
+    const rect = containerRef.current?.getBoundingClientRect();
+    const clickX = e.clientX - (rect?.left || 0);
+    const clickY = e.clientY - (rect?.top || 0);
+
+    const newPopup = {
+      id: `pop-${popupIdCounter.current}`,
+      x: clickX,
+      y: clickY,
+      text: '+5 MANGO',
+    };
+
+    setPopups(prev => [...prev, newPopup]);
+
+    // Cleanup popup after 1.2s
+    setTimeout(() => {
+      setPopups(prev => prev.filter(p => p.id !== newPopup.id));
+    }, 1200);
+  };
+
+  if (!isActive && mangoes.length === 0) return null;
+
+  const timeLeft = Math.max(0, Math.ceil((expiry - Date.now()) / 1000));
+
+  return (
+    <div 
+      ref={containerRef}
+      className="fixed inset-0 pointer-events-none z-[199] overflow-hidden"
+    >
+      {/* Active Event Banner */}
+      {isActive && timeLeft > 0 && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-yellow-500/20 backdrop-blur-md border-2 border-yellow-500/50 text-yellow-300 font-extrabold italic text-sm md:text-lg px-6 py-2.5 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.3)] flex items-center gap-3 select-none pointer-events-auto h-[46px] animate-bounce">
+          <span className="text-xl">🥭</span>
+          <span className="uppercase tracking-widest font-black">MANGO POINTS RAIN!</span>
+          <span className="bg-yellow-500 text-black px-2.5 py-0.5 rounded-full font-mono text-xs md:text-sm font-black tracking-normal">
+            {timeLeft}s
+          </span>
+        </div>
+      )}
+
+      {/* Floating Mango Particles */}
+      {mangoes.map(m => {
+        // Add smooth horizontal wave offset using the age
+        const age = (Date.now() - m.createdAt) / 1000;
+        const xOffset = Math.sin(age * m.swayFrequency * Math.PI * 2) * m.swayAmplitude;
+
+        return (
+          <div
+            key={m.id}
+            onClick={(e) => handleMangoClick(e, m.id)}
+            style={{
+              left: `calc(${m.x}% + ${xOffset}px)`,
+              top: `${m.y}px`,
+              fontSize: `${m.size}px`,
+              transform: `rotate(${m.rotation}deg)`,
+              textShadow: '0 4px 10px rgba(0,0,0,0.4)',
+            }}
+            className="absolute transition-all duration-75 select-none cursor-pointer pointer-events-auto hover:scale-125 hover:brightness-125 filter drop-shadow-lg flex items-center justify-center font-bold bg-transparent border-0 outline-none w-[80px] h-[80px]"
+          >
+            🥭
+          </div>
+        );
+      })}
+
+      {/* Floaty Text Popups */}
+      <AnimatePresence>
+        {popups.map(p => (
+          <motion.div
+            key={p.id}
+            initial={{ opacity: 1, scale: 0.8, y: p.y }}
+            animate={{ opacity: 0, scale: 1.4, y: p.y - 120 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.0, ease: 'easeOut' }}
+            style={{ left: p.x - 40, top: p.y }}
+            className="absolute text-yellow-400 text-sm md:text-lg font-black italic select-none pointer-events-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] tracking-wider whitespace-nowrap bg-black/50 px-2 py-0.5 rounded-lg border border-yellow-500/30"
+          >
+            🔥 {p.text} !
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}

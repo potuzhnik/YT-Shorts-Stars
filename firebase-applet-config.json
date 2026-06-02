@@ -1,0 +1,93 @@
+import { DailyQuest } from '../types';
+
+export function generateDailyQuests(): DailyQuest[] {
+  const quests: DailyQuest[] = [];
+
+  for (let i = 0; i < 3; i++) {
+    const isHardcore = Math.random() < 0.25; // 25% chance of hardcore quest
+    const type = Math.random() < 0.5 ? 'wins' : 'kills';
+
+    let target = 0;
+    let description = '';
+
+    if (type === 'wins') {
+      const basicTarget = Math.floor(Math.random() * 3) + 1; // 1 to 3 wins
+      target = isHardcore ? basicTarget * 5 : basicTarget;
+      description = isHardcore
+        ? `🔥 HARDCORE: Clutch victory in ${target} matches!`
+        : `Win ${target} match${target > 1 ? 'es' : ''} in any mode`;
+    } else {
+      const basicTarget = Math.floor(Math.random() * 10) + 5; // 5 to 14 kills
+      target = isHardcore ? basicTarget * 5 : basicTarget;
+      description = isHardcore
+        ? `🔥 HARDCORE: Defeat ${target} enemy memes in battle!`
+        : `Defeat ${target} enemies in battle`;
+    }
+
+    // Reward calculations
+    let rewardType: 'coins' | 'trophies' | 'svinemarks' | 'crate_aura' | 'crate_pearl' | 'crate_mango' | 'crate_potuzhno' = 'coins';
+    let rewardAmount = 1;
+
+    if (isHardcore) {
+      // Hardcore rewards (5x or better crates)
+      const r = Math.random();
+      if (r < 0.3) {
+        rewardType = 'coins';
+        rewardAmount = (Math.floor(Math.random() * 501) + 1500) * (type === 'wins' ? 2 : 1);
+      } else if (r < 0.55) {
+        rewardType = 'svinemarks';
+        rewardAmount = (Math.floor(Math.random() * 51) + 200) * (type === 'wins' ? 2 : 1);
+      } else if (r < 0.75) {
+        rewardType = 'trophies';
+        rewardAmount = (Math.floor(Math.random() * 21) + 120);
+      } else {
+        // High tier crates
+        rewardType = Math.random() < 0.65 ? 'crate_mango' : 'crate_potuzhno';
+        rewardAmount = 1;
+      }
+    } else {
+      // Basic rewards
+      const r = Math.random();
+      if (r < 0.4) {
+        rewardType = 'coins';
+        rewardAmount = (Math.floor(Math.random() * 101) + 250) * (type === 'wins' ? 2 : 1);
+      } else if (r < 0.7) {
+        rewardType = 'svinemarks';
+        rewardAmount = (Math.floor(Math.random() * 16) + 30) * (type === 'wins' ? 2 : 1);
+      } else if (r < 0.9) {
+        rewardType = 'trophies';
+        rewardAmount = (Math.floor(Math.random() * 6) + 15);
+      } else {
+        rewardType = Math.random() < 0.7 ? 'crate_aura' : 'crate_pearl';
+        rewardAmount = 1;
+      }
+    }
+
+    quests.push({
+      id: `quest_${Date.now()}_${i}_${Math.floor(Math.random() * 1000)}`,
+      description,
+      type,
+      target,
+      progress: 0,
+      claimed: false,
+      reward: {
+        type: rewardType,
+        amount: rewardAmount,
+      },
+      isHardcore,
+    });
+  }
+
+  return quests;
+}
+
+/**
+ * Returns YYYY-MM-DD format based on local time or 24h cycle
+ */
+export function getTodayDateString(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
